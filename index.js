@@ -3,12 +3,16 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const mongoose = require("mongoose");
+const cookieParser = require("cookie-parser");
 const port = 5000;
+
+const bcrypt = require("bcrypt");
+
+const jwt = require("jsonwebtoken");
 
 const User = require("./models/users.js");
 
 //middlewire
-
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -16,6 +20,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 //database connection
 mongoose
@@ -25,15 +30,38 @@ mongoose
   .then(() => console.log("connected to db"))
   .catch((err) => console.error(err));
 
+//password hasing
+const saltRounds = 10;
+
+//jwt private key
+const jwtPrivateKey = process.env.PRIVATE_KEY;
+
 //Register user
-app.post("/register", async (req, res) => {
+app.post("/register", (req, res) => {
+  const token = req.cookies?.token;
   const { userName, email, password } = req.body;
 
-  const registerData = await User.create({
-    userName: userName,
-    email: email,
-    password: password,
+  bcrypt.hash(password, saltRounds, async (err, hash) => {
+    if (err) throw err;
+    const hashedPassword = hash;
+    const registerData = await User.create({
+      userName: userName,
+      email: email,
+      password: hashedPassword,
+    });
   });
+
+  if (!token) {
+    jwt.sign({ email, password }, jwtPrivateKey, {}, (err, token) => {
+      if (err) throw err;
+      console.log(token);
+      res
+        .cookie("token", token, { sameSite: "none", secure: true })
+        .send("cookie set successfully");
+    });
+  } else {
+    res.send("cookie already exist");
+  }
 });
 
 app.get("/", (req, res) => {
