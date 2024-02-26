@@ -64,6 +64,28 @@ app.post("/register", (req, res) => {
   }
 });
 
+//login user
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  const matchedUser = await User.findOne({ email });
+
+  const hashedPassword = matchedUser.password;
+
+  if (matchedUser) {
+    bcrypt.compare(password, hashedPassword, (err, result) => {
+      if (result) {
+        jwt.sign({ email, password }, jwtPrivateKey, {}, (err, token) => {
+          if (err) throw err;
+          res.cookie("token", token).send("cookie set successfully");
+        });
+      } else {
+        res.send(err);
+      }
+    });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Sever is running");
 });
