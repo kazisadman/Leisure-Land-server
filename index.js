@@ -52,7 +52,7 @@ app.post("/register", (req, res) => {
       });
     });
 
-    jwt.sign({ email, password }, jwtPrivateKey, {}, (err, token) => {
+    jwt.sign({ email, userName }, jwtPrivateKey, {}, (err, token) => {
       if (err) throw err;
       console.log(token);
       res
@@ -73,11 +73,12 @@ app.post("/login", async (req, res) => {
     const matchedUser = await User.findOne({ email });
 
     const hashedPassword = matchedUser.password;
+    const userName = matchedUser.userName;
 
     if (matchedUser) {
       bcrypt.compare(password, hashedPassword, (err, result) => {
         if (result) {
-          jwt.sign({ email, password }, jwtPrivateKey, {}, (err, token) => {
+          jwt.sign({ email, userName }, jwtPrivateKey, {}, (err, token) => {
             if (err) throw err;
             res.cookie("token", token).send("cookie set successfully");
           });
@@ -94,13 +95,17 @@ app.post("/login", async (req, res) => {
 //User data
 app.get("/profile", (req, res) => {
   const token = req.cookies?.token;
-  console.log(token);
   if (token) {
     jwt.verify(token, jwtPrivateKey, {}, (err, userData) => {
       if (err) throw err;
       res.json(userData);
     });
   }
+});
+
+//logout user
+app.get("/logout", (req, res) => {
+  res.cookie("token", "").status(200).send("Logged out successfully");
 });
 
 app.get("/", (req, res) => {
